@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>公社科百萬富翁 - 「一國兩制」下的香港</title>
+    <style>
+        :root { --atv-blue: #000044; --atv-gold: #ffd700; --atv-orange: #ff9900; }
+        body { background-color: #000; color: white; font-family: "Microsoft JhengHei", "Arial", sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-size: 16px; overflow: hidden; }
+        
+        #game-wrapper { width: 95%; max-width: 1000px; max-height: 95vh; display: flex; flex-direction: column; background: var(--atv-blue); border: 4px solid var(--atv-gold); padding: 20px; box-sizing: border-box; border-radius: 25px; position: relative; box-shadow: 0 0 40px rgba(255, 215, 0, 0.4); overflow-y: auto; }
+        
+        #music-ctrl { position: absolute; top: 15px; right: 15px; z-index: 100; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 30px; border: 2px solid var(--atv-gold); cursor: pointer; font-size: 0.85em; }
+
+        .screen { display: none; width: 100%; height: 100%; }
+        .active-screen { display: flex; flex-direction: column; justify-content: center; }
+        .centered-content { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%; }
+        
+        h1 { color: var(--atv-gold); font-size: 2.5em; margin: 0 0 10px 0; text-shadow: 2px 2px 5px #000; }
+        input[type="text"] { width: 90%; max-width: 400px; padding: 12px; margin: 15px 0; border-radius: 12px; border: 3px solid var(--atv-gold); background: #001; color: white; font-size: 1.2em; text-align: center; font-weight: bold; }
+        .atv-btn { background: linear-gradient(to bottom, var(--atv-orange), #cc6600); color: white; padding: 12px 35px; font-size: 1.2em; border: 2px solid white; border-radius: 40px; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.3s; }
+        .atv-btn:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--atv-orange); }
+
+        .leaderboard-box { background: rgba(0,0,0,0.5); border: 2px solid var(--atv-gold); border-radius: 15px; padding: 15px; width: 100%; max-width: 600px; margin-bottom: 15px; }
+        .lb-table { width: 100%; border-collapse: collapse; font-size: 1em; }
+        .lb-table th { color: var(--atv-gold); padding: 8px; border-bottom: 2px solid #555; }
+        .lb-table td { padding: 8px; border-bottom: 1px solid #333; text-align: center; }
+
+        #main-game-container { display: flex; gap: 20px; flex: 1; }
+        .game-left { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
+        
+        .status-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: rgba(0,0,0,0.4); padding: 10px 20px; border-radius: 12px; border: 1px solid #555; }
+        #timer-display { font-size: 1.2em; color: var(--atv-orange); font-weight: bold; }
+
+        .question-box { background: rgba(0,0,0,0.6); padding: 20px; border: 2px solid #aaa; border-radius: 15px; text-align: center; font-size: 1.4em; line-height: 1.3; min-height: 100px; display: flex; flex-direction: column; justify-content: center; }
+        .lang-en { display: block; font-size: 0.75em; color: #ccc; margin-top: 10px; font-style: italic; }
+
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+        .opt-btn { background: linear-gradient(to bottom, #0000bb, #000044); border: 2px solid var(--atv-gold); color: white; padding: 15px; border-radius: 30px; cursor: pointer; text-align: left; font-size: 1.1em; min-height: 70px; display: flex; flex-direction: column; justify-content: center; transition: background 0.2s, color 0.2s; }
+        .opt-btn .en-opt { font-size: 0.75em; color: #bbb; margin-top: 5px; }
+
+        .money-ladder { width: 200px; background: rgba(0,0,0,0.7); border: 2px solid var(--atv-gold); padding: 10px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-around; }
+        .ladder-item { padding: 5px 10px; color: #777; text-align: right; border-bottom: 1px solid #333; font-size: 0.85em; }
+        .ladder-item.active { background: var(--atv-orange); color: white; font-weight: bold; transform: scale(1.05); border-radius: 5px; border: none; }
+        .ladder-item.milestone { color: #00ff00; }
+
+        .lifeline-row { display: flex; gap: 10px; justify-content: center; }
+        .lifeline { padding: 8px 15px; border-radius: 20px; border: 2px solid white; background: #333; color: white; cursor: pointer; font-size: 0.9em; font-weight: bold; }
+        .lifeline.used { opacity: 0.2; cursor: not-allowed; text-decoration: line-through; }
+
+        #result-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.95); flex-direction: column; align-items: center; justify-content: center; z-index: 10000; text-align: center; }
+        #yt-player { position: absolute; top: -1000px; }
+        
+        @media (max-width: 900px) { 
+            body { overflow: auto; }
+            #game-wrapper { padding: 10px; width: 98%; max-height: none; height: auto; border-radius: 15px; border-width: 2px; }
+            #main-game-container { flex-direction: column; gap: 10px; margin-top: 5px; } 
+            .money-ladder { display: none; } 
+            .options-grid { grid-template-columns: 1fr; gap: 8px; margin-top: 10px; } 
+            h1 { font-size: 1.8em; }
+            .question-box { font-size: 1.1em; padding: 15px 10px; min-height: 80px; }
+            .opt-btn { min-height: 50px; padding: 10px 15px; font-size: 1em; border-radius: 20px; }
+            .status-bar { padding: 8px 10px; flex-direction: column; gap: 10px; margin-bottom: 5px; }
+            .leaderboard-box { margin-bottom: 10px; }
+            #music-ctrl { top: 5px; right: 5px; padding: 5px 10px; font-size: 0.7em; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="yt-player"></div>
+<div id="music-ctrl" onclick="toggleMusic()">🔊 MUSIC: ON</div>
+
+<div id="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
+    <div style="width:85%; max-width:500px; background:#fff; color:#000; padding:30px; border-radius:20px; text-align:center; border:5px solid var(--atv-orange);">
+        <h2 id="lifeline-title" style="font-size:1.8em; margin-top:0;"></h2>
+        <div id="lifeline-content" style="font-size:1.3em; margin:20px 0;"></div>
+        <button class="atv-btn" style="font-size:1.2em; padding:10px 20px;" onclick="closeLifeline()">CLOSE / 關閉</button>
+    </div>
+</div>
+
+<div id="game-wrapper">
+    <div id="setup-screen" class="screen active-screen">
+        <div class="centered-content">
+            <h1>百萬富翁</h1>
+            <p style="font-size:1.1em; margin-top:0; color:var(--atv-gold);">中四公社科：「一國兩制」下的香港</p>
+            
+            <div class="leaderboard-box">
+                <h3 style="color:var(--atv-gold); font-size:1.2em; margin-top:0; margin-bottom:10px;">🏆 LEADERBOARD / 龍虎榜</h3>
+                <table class="lb-table" id="lb-body">
+                    <thead><tr><th>Rank</th><th>Name</th><th>Prize</th><th>Time</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <input type="text" id="player-name-input" placeholder="Enter Name / 輸入姓名" maxlength="12">
+            <button class="atv-btn" onclick="startGame()">START / 開始</button>
+        </div>
+    </div>
+
+    <div id="main-game" class="screen">
+        <div class="status-bar">
+            <div style="display:flex; gap:15px; align-items:center;">
+                <div style="color:var(--atv-gold); font-size:1.1em; font-weight:bold;">👤 <span id="display-name"></span></div>
+                <div id="timer-display">⏱️ 00:00</div>
+            </div>
+            <div class="lifeline-row">
+                <button class="lifeline" id="life5050" onclick="use5050()">50:50</button>
+                <button class="lifeline" id="lifePhone" onclick="usePhone()">☎️</button>
+                <button class="lifeline" id="lifeAudience" onclick="useAudience()">👥</button>
+            </div>
+        </div>
+
+        <div id="main-game-container">
+            <div class="game-left">
+                <div class="question-box">
+                    <div id="q-zh"></div>
+                    <div id="q-en" class="lang-en"></div>
+                </div>
+                <div class="options-grid">
+                    <button class="opt-btn" id="btn0" onclick="handleAnswer(0)"></button>
+                    <button class="opt-btn" id="btn1" onclick="handleAnswer(1)"></button>
+                    <button class="opt-btn" id="btn2" onclick="handleAnswer(2)"></button>
+                    <button class="opt-btn" id="btn3" onclick="handleAnswer(3)"></button>
+                </div>
+            </div>
+            <div class="money-ladder" id="ladder-box"></div>
+        </div>
+    </div>
+
+    <div id="result-overlay">
+        <h1 id="result-title" style="font-size:4em;"></h1>
+        <div id="result-msg" style="font-size: 2em; margin: 30px 0;"></div>
+        <button class="atv-btn" onclick="location.reload()">REPLAY / 重新挑戰</button>
+    </div>
+</div>
+
+<script>
+    // --- 中四級公民與社會發展科的主題一 「一國兩制」下的香港 ---
+    const ALL_QUESTIONS = [
+        {qz:"香港特別行政區政治體制的主要特徵是甚麼？", qe:"What is the main characteristic of the political structure of the HKSAR?", oz:["行政主導","立法主導","司法主導","三權分立"], oe:["Executive-led","Legislature-led","Judiciary-led","Separation of powers"], c:"行政主導"},
+        {qz:"誰是香港特別行政區的首長，同時也是行政機關的首長？", qe:"Who is the head of the HKSAR and the head of the Executive Authorities?", oz:["政務司司長","行政長官","立法會主席","終審法院首席法官"], oe:["Chief Secretary for Administration","Chief Executive","President of the Legislative Council","Chief Justice of the CFA"], c:"行政長官"},
+        {qz:"香港特別行政區行政長官的任期為多少年？", qe:"How long is the term of office for the Chief Executive of the HKSAR?", oz:["3年","4年","5年","6年"], oe:["3 years","4 years","5 years","6 years"], c:"5年"},
+        {qz:"下列哪項不是立法會的職權？", qe:"Which of the following is NOT a function of the Legislative Council (LegCo)?", oz:["制定法律","審核及通過財政預算","負責管理外交事務","對政府的工作提出質詢"], oe:["Enacting laws","Examining and approving budgets","Managing foreign affairs","Raising questions on government work"], c:"負責管理外交事務"},
+        {qz:"在中華人民共和國的法律體系中，甚麼具有最高的法律地位？", qe:"What has the highest legal authority in the legal system of the PRC?", oz:["《基本法》","《憲法》","《國家安全法》","《中英聯合聲明》"], oe:["The Basic Law","The Constitution","The National Security Law","The Sino-British Joint Declaration"], c:"《憲法》"},
+        {qz:"《憲法》與《基本法》的關係通常被形容為：", qe:"The relationship between the Constitution and the Basic Law is often described as:", oz:["平等關係","兄弟法關係","母子法關係","互不相干"], oe:["Equal relationship","Brotherly relationship","Mother and child law relationship","Irrelevant to each other"], c:"母子法關係"},
+        {qz:"《基本法》的解釋權屬於誰？", qe:"Who has the power of interpretation of the Basic Law?", oz:["香港終審法院","全國人民代表大會","全國人大常委會","香港立法會"], oe:["Hong Kong Court of Final Appeal","The National People's Congress","Standing Committee of the NPC","Hong Kong Legislative Council"], c:"全國人大常委會"},
+        {qz:"《基本法》的修改權屬於誰？", qe:"Who has the power of amendment of the Basic Law?", oz:["香港立法會","行政長官","全國人民代表大會","國務院"], oe:["Hong Kong Legislative Council","Chief Executive","The National People's Congress","State Council"], c:"全國人民代表大會"},
+        {qz:"哪個機關負責管理與香港特區有關的外交事務？", qe:"Which body is responsible for foreign affairs relating to the HKSAR?", oz:["香港特區政府","中央人民政府","聯合國","英國政府"], oe:["HKSAR Government","Central People's Government","United Nations","British Government"], c:"中央人民政府"},
+        {qz:"根據《基本法》，香港特區實行高度自治，享有：", qe:"Under the Basic Law, the HKSAR exercises a high degree of autonomy, which includes:", oz:["獨立主權","全面管治權","行政管理、立法及獨立司法權","國防和外交權"], oe:["Independent sovereignty","Comprehensive jurisdiction","Executive, legislative & independent judicial power","Defense and foreign affairs power"], c:"行政管理、立法及獨立司法權"},
+        {qz:"「總體國家安全觀」是由誰提出的戰略思想？", qe:"The Holistic Approach to National Security was proposed by whom?", oz:["鄧小平","習近平","董建華","李家超"], oe:["Deng Xiaoping","Xi Jinping","Tung Chee-hwa","John Lee"], c:"習近平"},
+        {qz:"根據「總體國家安全觀」，甚麼是維護國家安全的「宗旨」？", qe:"According to the Holistic Approach to National Security, what is the 'ultimate purpose'?", oz:["政治安全","經濟安全","人民安全","軍事安全"], oe:["Political security","Economic security","People's security","Military security"], c:"人民安全"},
+        {qz:"以下哪部列於《基本法》附件三的全國性法律在香港實施？", qe:"Which national law listed in Annex III of the Basic Law is implemented in HK?", oz:["《中華人民共和國刑法》","《中華人民共和國國歌法》","《中華人民共和國民法典》","《中華人民共和國教育法》"], oe:["Criminal Law of the PRC","National Anthem Law of the PRC","Civil Code of the PRC","Education Law of the PRC"], c:"《中華人民共和國國歌法》"},
+        {qz:"香港特區行政長官最長可連續擔任多少屆？", qe:"How many consecutive terms can the Chief Executive of the HKSAR serve?", oz:["一屆","兩屆","三屆","無限制"], oe:["One term","Two consecutive terms","Three consecutive terms","No limit"], c:"兩屆"},
+        {qz:"「一國兩制」是指在國家主體實行社會主義制度的情況下，香港實行甚麼制度？", qe:"Under 'One Country, Two Systems', the mainland practices socialism, while HK practices:", oz:["共產主義制度","資本主義制度","封建主義制度","民主集中制"], oe:["Communism","Capitalism","Feudalism","Democratic Centralism"], c:"資本主義制度"},
+        {qz:"下列哪位人員「不是」由中央人民政府任命的？", qe:"Which of the following is NOT appointed by the Central People's Government?", oz:["行政長官","政務司司長","立法會議員","警務處處長"], oe:["Chief Executive","Chief Secretary for Administration","Legislative Council Members","Commissioner of Police"], c:"立法會議員"},
+        {qz:"行政會議 (Executive Council) 的主要功能是甚麼？", qe:"What is the main function of the Executive Council?", oz:["制定法律","協助行政長官決策","審判案件","監督政府施政"], oe:["Enacting laws","Assisting the Chief Executive in decision-making","Adjudicating cases","Supervising the government"], c:"協助行政長官決策"},
+        {qz:"香港特區政治體制的核心基礎是甚麼？", qe:"What is the core foundation of the political structure of the HKSAR?", oz:["以立法會為核心","以司法機關為核心","以行政長官為核心的行政主導","區議會主導"], oe:["Centered on the Legislative Council","Centered on the Judiciary","Executive-led system headed by the Chief Executive","District Council-led"], c:"以行政長官為核心的行政主導"},
+        {qz:"擔任香港特區行政長官的最低年齡要求是多少？", qe:"What is the minimum age requirement to be the Chief Executive of the HKSAR?", oz:["30歲","35歲","40歲","45歲"], oe:["30 years old","35 years old","40 years old","45 years old"], c:"40歲"},
+        {qz:"根據「總體國家安全觀」，甚麼是維護國家安全的「基礎」？", qe:"According to the Holistic Approach to National Security, what serves as the 'foundation'?", oz:["政治安全","經濟安全","社會安全","科技安全"], oe:["Political security","Economic security","Social security","Technological security"], c:"經濟安全"}
+    ];
+
+    const MONEY_VALUES = [1000000, 500000, 250000, 150000, 80000, 60000, 40000, 30000, 20000, 10000, 8000, 4000, 3000, 2000, 1000];
+    const MONEY_TEXTS = ["1,000,000", "500,000", "250,000", "150,000", "80,000", "60,000", "40,000", "30,000", "20,000", "10,000", "8,000", "4,000", "3,000", "2,000", "1,000"];
+    
+    let gameQuestions = [];
+    let playerName = "";
+    let currentLv = 0;
+    let lifelines = { s50: false, phone: false, aud: false };
+    let startTime, timerInterval;
+
+    let player;
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('yt-player', {
+            height: '0', width: '0', videoId: 'MForOVuA6hs',
+            playerVars: { 'autoplay': 0, 'loop': 1, 'playlist': 'MForOVuA6hs' },
+            events: { 'onReady': () => console.log("Music Ready") }
+        });
+    }
+
+    function toggleMusic() {
+        if (!player) return;
+        const state = player.getPlayerState();
+        if (state === 1) { player.pauseVideo(); document.getElementById('music-ctrl').innerText = "🔇 MUSIC: OFF"; }
+        else { player.playVideo(); document.getElementById('music-ctrl').innerText = "🔊 MUSIC: ON"; }
+    }
+
+    function startGame() {
+        playerName = document.getElementById('player-name-input').value.trim();
+        if (!playerName) { alert("Please enter your name! 請輸入姓名！"); return; }
+        
+        let elem = document.documentElement;
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(err => console.log("全螢幕被阻擋:", err));
+        } else if (elem.webkitRequestFullscreen) { 
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) { 
+            elem.msRequestFullscreen();
+        }
+
+        if (player && typeof player.playVideo === 'function') player.playVideo();
+        
+        // 隨機抽選 15 題
+        let pool = [...ALL_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 15);
+        gameQuestions = pool.map(item => {
+            let combined = item.oz.map((z, i) => ({ z, e: item.oe[i] }));
+            combined.sort(() => Math.random() - 0.5);
+            return {
+                qz: item.qz, qe: item.qe,
+                oz: combined.map(x => x.z), oe: combined.map(x => x.e),
+                c: combined.findIndex(x => x.z === item.c || (item.c.includes(x.z) && x.z.length > 5)), 
+                correctStr: item.c
+            };
+        });
+
+        currentLv = 0;
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 1000);
+        document.getElementById('display-name').innerText = playerName;
+        showScreen('main-game');
+        initLadder();
+        loadQuestion();
+    }
+
+    function updateTimer() {
+        let diff = Math.floor((Date.now() - startTime) / 1000);
+        let m = Math.floor(diff / 60).toString().padStart(2, '0');
+        let s = (diff % 60).toString().padStart(2, '0');
+        document.getElementById('timer-display').innerText = `⏱️ ${m}:${s}`;
+    }
+
+    function initLadder() {
+        const box = document.getElementById('ladder-box');
+        box.innerHTML = '';
+        MONEY_TEXTS.forEach((val, i) => {
+            const lv = 15 - i;
+            const div = document.createElement('div');
+            div.className = 'ladder-item';
+            if (lv === 5 || lv === 10) div.classList.add('milestone');
+            div.id = `lv-${lv}`;
+            div.innerText = `${lv} ◆ $${val}`;
+            box.appendChild(div);
+        });
+    }
+
+    function loadQuestion() {
+        const qData = gameQuestions[currentLv];
+        document.getElementById('q-zh').innerText = `【Q${currentLv + 1}】 ${qData.qz}`;
+        document.getElementById('q-en').innerText = qData.qe;
+
+        for (let i = 0; i < 4; i++) {
+            const btn = document.getElementById(`btn${i}`);
+            btn.innerHTML = `<div><b>${String.fromCharCode(65+i)}:</b> ${qData.oz[i]}</div><div class="en-opt">${qData.oe[i]}</div>`;
+            btn.style.opacity = '1'; 
+            btn.style.pointerEvents = 'auto';
+            btn.style.background = 'linear-gradient(to bottom, #0000bb, #000044)';
+            btn.style.color = 'white'; 
+        }
+        document.querySelectorAll('.ladder-item').forEach(el => el.classList.remove('active'));
+        document.getElementById(`lv-${currentLv + 1}`).classList.add('active');
+    }
+
+    function handleAnswer(idx) {
+        const btns = document.querySelectorAll('.opt-btn');
+        btns.forEach(b => b.style.pointerEvents = 'none');
+
+        if (idx === gameQuestions[currentLv].c) {
+            document.getElementById(`btn${idx}`).style.background = '#00ff00';
+            document.getElementById(`btn${idx}`).style.color = '#000';
+            if (currentLv === 14) {
+                setTimeout(() => endGame("win"), 1200);
+            } else {
+                currentLv++;
+                setTimeout(loadQuestion, 1200);
+            }
+        } else {
+            document.getElementById(`btn${idx}`).style.background = '#ff0000';
+            document.getElementById(`btn${gameQuestions[currentLv].c}`).style.background = '#00ff00';
+            document.getElementById(`btn${gameQuestions[currentLv].c}`).style.color = '#000';
+            setTimeout(() => endGame("lose"), 1500);
+        }
+    }
+
+    function use5050() {
+        if (lifelines.s50) return;
+        const cIdx = gameQuestions[currentLv].c;
+        let wrong = [0,1,2,3].filter(i => i !== cIdx).sort(() => Math.random() - 0.5);
+        document.getElementById(`btn${wrong[0]}`).style.opacity = '0.1';
+        document.getElementById(`btn${wrong[0]}`).style.pointerEvents = 'none';
+        document.getElementById(`btn${wrong[1]}`).style.opacity = '0.1';
+        document.getElementById(`btn${wrong[1]}`).style.pointerEvents = 'none';
+        lifelines.s50 = true;
+        document.getElementById('life5050').classList.add('used');
+    }
+
+    function usePhone() {
+        if (lifelines.phone) return;
+        const cLetter = String.fromCharCode(65 + gameQuestions[currentLv].c);
+        openLifeline("☎️ CALL / 智囊團", `I think it's <b style='color:red;'>${cLetter}</b>!<br>我認為答案是 ${cLetter}！`);
+        lifelines.phone = true;
+        document.getElementById('lifePhone').classList.add('used');
+    }
+
+    function useAudience() {
+        if (lifelines.aud) return;
+        const c = gameQuestions[currentLv].c;
+        let p = [12, 12, 12, 12]; p[c] = 64;
+        openLifeline("👥 AUDIENCE / 問觀眾", `A: ${p[0]}% | B: ${p[1]}% | C: ${p[2]}% | D: ${p[3]}%<br>Most suggest <b>${String.fromCharCode(65+c)}</b>.`);
+        lifelines.aud = true;
+        document.getElementById('lifeAudience').classList.add('used');
+    }
+
+    function openLifeline(title, content) {
+        document.getElementById('lifeline-title').innerText = title;
+        document.getElementById('lifeline-content').innerHTML = content;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+    function closeLifeline() { document.getElementById('modal-overlay').style.display = 'none'; }
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+        document.getElementById(id).classList.add('active-screen');
+    }
+
+    function endGame(type) {
+        clearInterval(timerInterval);
+        const timeUsed = Math.floor((Date.now() - startTime) / 1000);
+        let prize = 0;
+        if (type === "win") prize = 1000000;
+        else {
+            if (currentLv >= 10) prize = 60000;
+            else if (currentLv >= 5) prize = 8000;
+        }
+
+        saveToLeaderboard(playerName, prize, timeUsed);
+        document.getElementById('result-overlay').style.display = 'flex';
+        document.getElementById('result-title').innerText = type === "win" ? "🏆 WINNER! 🏆" : "GAME OVER";
+        document.getElementById('result-msg').innerHTML = `${playerName}<br>PRIZE: <b style="color:var(--atv-gold);">$${prize.toLocaleString()}</b><br>TIME: ${timeUsed}s`;
+    }
+
+    function saveToLeaderboard(name, money, time) {
+        try {
+            // 使用專屬的 localStorage 避免覆蓋上一版遊戲的紀錄
+            let lb = JSON.parse(localStorage.getItem('s4_csd_ch1_lb') || '[]');
+            lb.push({ name, money, time });
+            lb.sort((a, b) => b.money - a.money || a.time - b.time);
+            localStorage.setItem('s4_csd_ch1_lb', JSON.stringify(lb.slice(0, 10)));
+            displayLeaderboard();
+        } catch (e) {
+            console.warn("無法儲存龍虎榜。");
+        }
+    }
+
+    function displayLeaderboard() {
+        try {
+            let lb = JSON.parse(localStorage.getItem('s4_csd_ch1_lb') || '[]');
+            const tbody = document.querySelector('#lb-body tbody');
+            tbody.innerHTML = lb.length ? "" : "<tr><td colspan='4'>No Records</td></tr>";
+            lb.forEach((e, i) => {
+                tbody.innerHTML += `<tr><td>${i+1}</td><td>${e.name}</td><td>$${e.money.toLocaleString()}</td><td>${e.time}s</td></tr>`;
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    displayLeaderboard();
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>
