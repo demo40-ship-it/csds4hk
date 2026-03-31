@@ -86,10 +86,12 @@
             <p style="font-size:1.1em; margin-top:0; color:var(--atv-gold);">中四公社科：「一國兩制」下的香港</p>
             
             <div class="leaderboard-box">
-                <h3 style="color:var(--atv-gold); font-size:1.2em; margin-top:0; margin-bottom:10px;">🏆 LEADERBOARD / 龍虎榜</h3>
+                <h3 style="color:var(--atv-gold); font-size:1.2em; margin-top:0; margin-bottom:10px;">🏆 雲端龍虎榜 (GLOBAL TOP 10)</h3>
                 <table class="lb-table" id="lb-body">
                     <thead><tr><th>Rank</th><th>Name</th><th>Prize</th><th>Time</th></tr></thead>
-                    <tbody></tbody>
+                    <tbody>
+                        <tr><td colspan='4'>正在連接雲端資料庫... Loading...</td></tr>
+                    </tbody>
                 </table>
             </div>
 
@@ -131,12 +133,17 @@
     <div id="result-overlay">
         <h1 id="result-title" style="font-size:4em;"></h1>
         <div id="result-msg" style="font-size: 2em; margin: 30px 0;"></div>
+        <div id="upload-status" style="font-size:1em; color:var(--atv-gold); margin-bottom:20px;"></div>
         <button class="atv-btn" onclick="location.reload()">REPLAY / 重新挑戰</button>
     </div>
 </div>
 
 <script>
-    // --- 中四級公民與社會發展科的主題一 「一國兩制」下的香港 ---
+    // ==========================================
+    // ⚠️ 教師設定區：請貼上你的 Google Apps Script 網址
+    // ==========================================
+    const SCRIPT_URL = '請把你的_GOOGLE_APPS_SCRIPT_URL_貼在這裡';
+
     const ALL_QUESTIONS = [
         {qz:"香港特別行政區政治體制的主要特徵是甚麼？", qe:"What is the main characteristic of the political structure of the HKSAR?", oz:["行政主導","立法主導","司法主導","三權分立"], oe:["Executive-led","Legislature-led","Judiciary-led","Separation of powers"], c:"行政主導"},
         {qz:"誰是香港特別行政區的首長，同時也是行政機關的首長？", qe:"Who is the head of the HKSAR and the head of the Executive Authorities?", oz:["政務司司長","行政長官","立法會主席","終審法院首席法官"], oe:["Chief Secretary for Administration","Chief Executive","President of the Legislative Council","Chief Justice of the CFA"], c:"行政長官"},
@@ -190,17 +197,12 @@
         if (!playerName) { alert("Please enter your name! 請輸入姓名！"); return; }
         
         let elem = document.documentElement;
-        if (elem.requestFullscreen) {
-            elem.requestFullscreen().catch(err => console.log("全螢幕被阻擋:", err));
-        } else if (elem.webkitRequestFullscreen) { 
-            elem.webkitRequestFullscreen();
-        } else if (elem.msRequestFullscreen) { 
-            elem.msRequestFullscreen();
-        }
+        if (elem.requestFullscreen) { elem.requestFullscreen().catch(()=>{}); } 
+        else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } 
+        else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
 
         if (player && typeof player.playVideo === 'function') player.playVideo();
         
-        // 隨機抽選 15 題
         let pool = [...ALL_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 15);
         gameQuestions = pool.map(item => {
             let combined = item.oz.map((z, i) => ({ z, e: item.oe[i] }));
@@ -321,7 +323,7 @@
         document.getElementById(id).classList.add('active-screen');
     }
 
-    function endGame(type) {
+    async function endGame(type) {
         clearInterval(timerInterval);
         const timeUsed = Math.floor((Date.now() - startTime) / 1000);
         let prize = 0;
@@ -331,38 +333,57 @@
             else if (currentLv >= 5) prize = 8000;
         }
 
-        saveToLeaderboard(playerName, prize, timeUsed);
         document.getElementById('result-overlay').style.display = 'flex';
         document.getElementById('result-title').innerText = type === "win" ? "🏆 WINNER! 🏆" : "GAME OVER";
         document.getElementById('result-msg').innerHTML = `${playerName}<br>PRIZE: <b style="color:var(--atv-gold);">$${prize.toLocaleString()}</b><br>TIME: ${timeUsed}s`;
+        
+        await saveToCloudLeaderboard(playerName, prize, timeUsed);
     }
 
-    function saveToLeaderboard(name, money, time) {
+    // --- 連接 Google Sheets 資料庫的函數 ---
+    async function saveToCloudLeaderboard(name, money, time) {
+        if (!SCRIPT_URL || SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbyh7as_8Ue-bAJfHjjizJc7a1zDip61gvZdKZO-k81nAQ40bELNKm2kz87-qzeq58l8cQ/exec")) {
+            document.getElementById('upload-status').innerText = "⚠️ 老師尚未設定雲端資料庫網址，成績僅供參考。";
+            return;
+        }
+
+        document.getElementById('upload-status').innerText = "🔄 正在將成績上傳至雲端...";
         try {
-            // 使用專屬的 localStorage 避免覆蓋上一版遊戲的紀錄
-            let lb = JSON.parse(localStorage.getItem('s4_csd_ch1_lb') || '[]');
-            lb.push({ name, money, time });
-            lb.sort((a, b) => b.money - a.money || a.time - b.time);
-            localStorage.setItem('s4_csd_ch1_lb', JSON.stringify(lb.slice(0, 10)));
-            displayLeaderboard();
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 避免 CORS 阻擋
+                body: JSON.stringify({ name: name, money: money, time: time })
+            });
+            document.getElementById('upload-status').innerText = "✅ 成績已成功上傳至雲端！";
         } catch (e) {
-            console.warn("無法儲存龍虎榜。");
+            console.error("上傳失敗", e);
+            document.getElementById('upload-status').innerText = "❌ 成績上傳失敗，請檢查網路連線。";
         }
     }
 
-    function displayLeaderboard() {
+    async function displayLeaderboard() {
+        const tbody = document.querySelector('#lb-body tbody');
+        
+        if (!SCRIPT_URL || SCRIPT_URL.includes("請把你的_GOOGLE_APPS_SCRIPT_URL_貼在這裡")) {
+            tbody.innerHTML = "<tr><td colspan='4' style='color:#ffaa00;'>⚠️ 尚未連接雲端資料庫</td></tr>";
+            return;
+        }
+
         try {
-            let lb = JSON.parse(localStorage.getItem('s4_csd_ch1_lb') || '[]');
-            const tbody = document.querySelector('#lb-body tbody');
-            tbody.innerHTML = lb.length ? "" : "<tr><td colspan='4'>No Records</td></tr>";
+            let res = await fetch(SCRIPT_URL);
+            let lb = await res.json();
+            
+            tbody.innerHTML = lb.length ? "" : "<tr><td colspan='4'>暫無紀錄 No Records</td></tr>";
             lb.forEach((e, i) => {
-                tbody.innerHTML += `<tr><td>${i+1}</td><td>${e.name}</td><td>$${e.money.toLocaleString()}</td><td>${e.time}s</td></tr>`;
+                tbody.innerHTML += `<tr><td>${i+1}</td><td>${e.name}</td><td>$${Number(e.money).toLocaleString()}</td><td>${e.time}s</td></tr>`;
             });
         } catch (e) {
+            tbody.innerHTML = "<tr><td colspan='4' style='color:red;'>❌ 無法載入雲端紀錄</td></tr>";
             console.error(e);
         }
     }
 
+    // 遊戲載入時，自動抓取最新的雲端排行榜
     displayLeaderboard();
 </script>
 <script src="https://www.youtube.com/iframe_api"></script>
