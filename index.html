@@ -140,9 +140,9 @@
 
 <script>
     // ==========================================
-    // ⚠️ 教師設定區：請貼上你的 Google Apps Script 網址
+    // ✅ 已更新為老師專屬的 Google Apps Script 網址
     // ==========================================
-    const SCRIPT_URL = '請把你的_GOOGLE_APPS_SCRIPT_URL_貼在這裡';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyh7as_8Ue-bAJfHjjizJc7a1zDip61gvZdKZO-k81nAQ40bELNKm2kz87-qzeq58l8cQ/exec';
 
     const ALL_QUESTIONS = [
         {qz:"香港特別行政區政治體制的主要特徵是甚麼？", qe:"What is the main characteristic of the political structure of the HKSAR?", oz:["行政主導","立法主導","司法主導","三權分立"], oe:["Executive-led","Legislature-led","Judiciary-led","Separation of powers"], c:"行政主導"},
@@ -342,7 +342,7 @@
 
     // --- 連接 Google Sheets 資料庫的函數 ---
     async function saveToCloudLeaderboard(name, money, time) {
-        if (!SCRIPT_URL || SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbyh7as_8Ue-bAJfHjjizJc7a1zDip61gvZdKZO-k81nAQ40bELNKm2kz87-qzeq58l8cQ/exec")) {
+        if (!SCRIPT_URL || SCRIPT_URL.includes("請把你的_GOOGLE_APPS_SCRIPT_URL_貼在這裡")) {
             document.getElementById('upload-status').innerText = "⚠️ 老師尚未設定雲端資料庫網址，成績僅供參考。";
             return;
         }
